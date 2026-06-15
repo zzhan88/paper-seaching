@@ -6,6 +6,7 @@ from datetime import datetime
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.header import Header
+from email.utils import formataddr
 
 WORK_DIR = os.path.dirname(os.path.abspath(__file__))
 OUTPUT_DIR = os.path.join(WORK_DIR, "output")
@@ -44,7 +45,7 @@ def send_email(html_content, date_tag, is_test=False):
         subject = f"[测试] {subject}"
 
     msg = MIMEMultipart("alternative")
-    msg["From"] = f"AI+酶工程 文献推送 <{QQ_EMAIL}>"
+    msg["From"] = formataddr((str(Header("AI+酶工程 文献推送", "utf-8")), QQ_EMAIL))
     msg["To"] = RECIPIENT_EMAIL
     msg["Subject"] = Header(subject, "utf-8")
 
