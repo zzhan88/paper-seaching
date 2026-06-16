@@ -13,7 +13,6 @@ OA_BASE = "https://api.openalex.org"
 API_DELAY = 0.3
 MAX_PAPERS = 10
 SEARCH_DAYS = 30        # 搜索最近30天的论文
-FALLBACK_DAYS = 90      # 如果不够则扩展到90天
 MAX_SAME_VENUE = 3      # 同一期刊最多选3篇，避免扎堆顶刊
 
 SEARCH_TOPICS = [
