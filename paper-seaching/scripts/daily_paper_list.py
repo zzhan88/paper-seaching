@@ -26,6 +26,17 @@ SEARCH_TOPICS = [
     "AI enzyme engineering protein engineering",
     "machine learning enzyme activity protein engineering",
     "deep learning protein structure enzyme design",
+    "enzyme engineering biocatalysis biotransformation",
+    "enzyme discovery characterization engineering",
+    "protein evolution rational design engineering",
+    "enzyme immobilization bioprocess",
+    "substrate specificity enzyme engineering",
+    "metabolic engineering enzyme pathway",
+    "biosynthesis enzyme engineering",
+    "enzyme production biochemical engineering",
+    "protein engineering function optimization",
+    "enzyme catalytic mechanism structure",
+    "biocatalysis industrial enzyme application",
 ]
 
 CORE_KEYWORDS = [
@@ -261,7 +272,9 @@ def main():
     ckws = set()
     venue_count = {}
     kwl = ["deep learning","language model","diffusion","graph","directed evolution",
-           "protein design","enzyme catalysis","molecular dynamics"]
+           "protein design","enzyme catalysis","molecular dynamics","biocatalysis",
+           "bioprocess","biosynthesis","metabolic engineering","fermentation"]
+
 
     # 更新首个论文的期刊计数
     first_venue = get_venue(scored[0][2].get("primary_location"))
@@ -316,3 +329,4 @@ if __name__=="__main__":
     try: main()
     except KeyboardInterrupt: sys.exit(1)
     except Exception as e: log.error(f"失败: {e}"); traceback.print_exc(); sys.exit(1)
+
