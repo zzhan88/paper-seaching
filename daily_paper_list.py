@@ -304,7 +304,7 @@ def main():
     log.info(f"最终选取 {len(selected)} 篇")
 
     # 保存结果
-    entries = [build_entry(w, db, published_today=(wid in today_wids)) for _,_,wid,w in selected]
+    entries = [build_entry(w, db, published_today=(wid in today_wids)) for _,wid,w in selected]
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = datetime.now().strftime("%Y-%m-%d")
     jp = os.path.join(OUTPUT_DIR, f"papers_raw_{today}.json")
