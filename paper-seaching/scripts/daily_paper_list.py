@@ -237,8 +237,12 @@ def main():
     log.info(f"历史已发论文: {len(seen_dois)} 篇")
 
     # 两阶段搜索：先试30天，不够就扩展
+    today_str = (datetime.now()).strftime('%Y-%m-%d')
+    all_works = {}
+    today_wids = set()
+    last_days = 0
+
     for days in [0, 30, 60, 90, 120, 180, 365]:
-        all_works.setdefault("x", {})
         if days == 0:
             fd = datetime.now().strftime("%Y-%m-%d")
         else:
@@ -253,10 +257,11 @@ def main():
                 if doi in dedup_doi: continue
                 if not is_relevant(title, abstract): continue
                 dedup_doi.add(doi); all_works[wid]=w
+                if days == 0: today_wids.add(wid)
         log.info(f"相关度过滤后 ({days}天): {len(all_works)} 篇")
         if len(all_works) >= MAX_PAPERS * 1.5: break
-        if attempt == 1:
-            log.info(f"论文不足，扩展搜索窗口至 {FALLBACK_DAYS} 天")
+        if days > 0:
+            last_days = days
 
     if not all_works: log.warning("未获取到论文"); return
 
@@ -266,7 +271,7 @@ def main():
     if not new_works:
         log.warning("Nothing new")
         return
-    log.info(f"After dedup: {len(new_works)}")
+    log.info(f"After dedup: {len(new_works)} (today: {len(today_wids & set(new_works.keys()))})")
 
     # 评分 + 多样性筛选 + 同一期刊限制
     scored = sorted([(score_work(w,db),wid,w) for wid,w in new_works.items()], key=lambda x:x[0], reverse=True)
