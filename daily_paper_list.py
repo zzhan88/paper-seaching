@@ -237,8 +237,12 @@ def main():
     log.info(f"历史已发论文: {len(seen_dois)} 篇")
 
     # 两阶段搜索：先试30天，不够就扩展
+    today_str = (datetime.now()).strftime('%Y-%m-%d')
+    all_works = {}
+    today_wids = set()
+    last_days = 0
+
     for days in [0, 30, 60, 90, 120, 180, 365]:
-        all_works.setdefault("x", {})
         if days == 0:
             fd = datetime.now().strftime("%Y-%m-%d")
         else:
