@@ -140,10 +140,12 @@ def is_relevant(title, abstract):
     has_bio = sum(1 for kw in bio_kws if kw in txt) >= 2
     return has_ai and has_bio
 
-def search_works(query, limit=20, days=SEARCH_DAYS):
-    """按滚动时间窗口搜索，按出版日期降序"""
-    from_date = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
-    to_date = datetime.now().strftime("%Y-%m-%d")
+def search_works(query, from_date=None, to_date=None, limit=20):
+    """按日期范围搜索"""
+    if from_date is None:
+        from_date = datetime.now().strftime("%Y-%m-%d")
+    if to_date is None:
+        to_date = datetime.now().strftime("%Y-%m-%d")
     data = oa_get(f"{OA_BASE}/works", {
         "search": query,
         "sort": "publication_date:desc",
@@ -206,7 +208,7 @@ def score_work(w, db):
     s = rel_score*1.5 + novelty_score + cite_score + journal_score
     return s
 
-def build_entry(w,db):
+def build_entry(w, db, published_today=False):
     v=get_venue(w.get("primary_location"))
     ji=lookup_journal(v,db)
     pd=w.get("publication_date","") or ""
@@ -223,6 +225,7 @@ def build_entry(w,db):
         "publication_date":pd, "year":py, "month":pm,
         "citations":w.get("cited_by_count") or 0,
         "concepts":get_concepts(w), "source":"OpenAlex",
+        "published_today":published_today,
     }
 
 def main():
@@ -234,10 +237,15 @@ def main():
     log.info(f"历史已发论文: {len(seen_dois)} 篇")
 
     # 两阶段搜索：先试30天，不够就扩展
-    for attempt, days in [(1, SEARCH_DAYS), (2, FALLBACK_DAYS)]:
-        all_works={}; dedup_doi=set()
+    for days in [0, 30, 60, 90, 120, 180, 365]:
+        all_works.setdefault("x", {})
+        if days == 0:
+            fd = datetime.now().strftime("%Y-%m-%d")
+        else:
+            fd = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+        dedup_doi = set()
         for q in SEARCH_TOPICS:
-            for w in search_works(q, days=days):
+            for w in search_works(q, from_date=fd, to_date=datetime.now().strftime("%Y-%m-%d")):
                 wid=w.get("id",""); doi=w.get("doi","") or ""
                 title=(w.get("title") or "").strip().lower()
                 abstract=reconstruct_abstract(w.get("abstract_inverted_index"))
@@ -254,16 +262,11 @@ def main():
 
     # 排除已发论文
     new_works = {wid: w for wid, w in all_works.items()
-                 if (w.get("doi") or "").replace("https://doi.org/","") not in seen_dois
-                 or not seen_dois}
-    if len(new_works) < MAX_PAPERS:
-        # 补充一些已发论文中最新/相关的
-        log.warning(f"新论文仅 {len(new_works)} 篇，补充已发论文")
-        for wid, w in all_works.items():
-            if wid not in new_works:
-                new_works[wid] = w
-                if len(new_works) >= MAX_PAPERS: break
-    log.info(f"排除已发后: {len(new_works)} 篇")
+                 if (w.get("doi") or "").replace("https://doi.org/","") not in seen_dois}
+    if not new_works:
+        log.warning("Nothing new")
+        return
+    log.info(f"After dedup: {len(new_works)}")
 
     # 评分 + 多样性筛选 + 同一期刊限制
     scored = sorted([(score_work(w,db),wid,w) for wid,w in new_works.items()], key=lambda x:x[0], reverse=True)
@@ -297,7 +300,7 @@ def main():
     log.info(f"最终选取 {len(selected)} 篇")
 
     # 保存结果
-    entries = [build_entry(w,db) for _,_,w in selected]
+    entries = [build_entry(w, db, published_today=(wid in today_wids)) for _,_,wid,w in selected]
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     today = datetime.now().strftime("%Y-%m-%d")
     jp = os.path.join(OUTPUT_DIR, f"papers_raw_{today}.json")

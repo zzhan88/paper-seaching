@@ -5,6 +5,9 @@ on:
     - cron: '0 2 * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   daily-paper-push:
     runs-on: ubuntu-latest
@@ -18,14 +21,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Restore seen papers cache
-        uses: actions/cache@v4
-        with:
-          path: output/seen_papers.json
-          key: seen-papers-${{ github.ref_name }}
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.10'
           cache: 'pip'
@@ -35,3 +31,11 @@ jobs:
 
       - name: Run pipeline
         run: python run_all.py
+
+      - name: Save seen papers to repo
+        run: |
+          git config user.name "paper-bot"
+          git config user.email "bot@example.com"
+          git add output/seen_papers.json
+          git diff --staged --quiet || git commit -m "update seen papers [skip ci]"
+          git push

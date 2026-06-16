@@ -2,8 +2,11 @@
 __pycache__/
 *.pyc
 
-# 输出目录（生成的日报都是运行时产物，不需要提交）
-output/
+# 输出目录 — 只追踪去重记录文件
+output/*.md
+output/*.html
+output/*.json
+!output/seen_papers.json
 
 # IDE 配置
 .vscode/
