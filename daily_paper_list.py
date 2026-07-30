@@ -333,7 +333,9 @@ def main():
     print("="*50)
 
 if __name__=="__main__":
-    try: main()
+    # v5 引擎独立维护多源适配、主题准入、期刊匹配和多样性排序。
+    from recommendation_engine import main as optimized_main
+    try: optimized_main()
     except KeyboardInterrupt: sys.exit(1)
     except Exception as e: log.error(f"失败: {e}"); traceback.print_exc(); sys.exit(1)
 

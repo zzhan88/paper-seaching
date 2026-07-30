@@ -147,6 +147,7 @@ def main():
     log.info(f"已保存: {p}"); print(f"[OK] HTML -> {p}")
 
 if __name__ == "__main__":
-    try: main()
+    from email_report import main as optimized_main
+    try: optimized_main()
     except KeyboardInterrupt: sys.exit(1)
     except Exception as e: log.error(f"失败: {e}"); import traceback; traceback.print_exc(); sys.exit(1)

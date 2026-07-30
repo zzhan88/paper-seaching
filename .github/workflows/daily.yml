@@ -4,6 +4,16 @@ on:
   schedule:
     - cron: '0 2 * * *'
   workflow_dispatch:
+    inputs:
+      test_mode:
+        description: "测试邮件：忽略历史记录并且不写回 seen_papers"
+        required: true
+        default: true
+        type: boolean
+
+concurrency:
+  group: daily-paper-push
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -11,12 +21,18 @@ permissions:
 jobs:
   daily-paper-push:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     env:
       DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
       DEEPSEEK_MODEL: deepseek-chat
       QQ_EMAIL: ${{ secrets.QQ_EMAIL }}
       QQ_EMAIL_AUTH_CODE: ${{ secrets.QQ_EMAIL_AUTH_CODE }}
       RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
+      NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
+      CROSSREF_MAILTO: ${{ secrets.QQ_EMAIL }}
+      LITERATURE_SOURCES: openalex,pubmed,crossref
+      IGNORE_SEEN: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_mode) && '1' || '0' }}
+      TEST_EMAIL: ${{ (github.event_name == 'workflow_dispatch' && inputs.test_mode) && '1' || '0' }}
 
     steps:
       - uses: actions/checkout@v4
@@ -29,13 +45,26 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run pipeline
+      - name: Run offline tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Run literature pipeline
         run: python run_all.py
 
       - name: Save seen papers to repo
+        if: env.IGNORE_SEEN != '1'
         run: |
           git config user.name "paper-bot"
           git config user.email "bot@example.com"
           git add output/seen_papers.json
           git diff --staged --quiet || git commit -m "update seen papers [skip ci]"
           git push
+
+      - name: Write run summary
+        if: always()
+        shell: bash
+        run: |
+          echo "## AI × 酶工程文献推送" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 模式：$([ \"$TEST_EMAIL\" = \"1\" ] && echo '测试邮件' || echo '每日正式推送')" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 数据源：OpenAlex、PubMed、Crossref" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 运行状态：${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

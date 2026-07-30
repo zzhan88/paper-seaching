@@ -25,7 +25,8 @@ def gen_posts(data):
 
     posts = []
     posts.append(f"【AI+酶工程 每日文献速递 {date_tag}】")
-    posts.append(f"📊 今日从 OpenAlex 检索 {total} 篇论文，精选 {len(papers)} 篇推荐")
+    sources = "、".join(data.get("enabled_sources", [])) or "OpenAlex"
+    posts.append(f"📊 今日从 {sources} 获得 {total} 篇对口候选，精选 {len(papers)} 篇")
     posts.append("")
     posts.append("─" * 25)
     posts.append("")
@@ -61,6 +62,8 @@ def gen_posts(data):
         posts.append(f"📌 {i}. {title}")
         posts.append(f"   📰 {jn} | {yr}年 | 引用{ct}次")
         posts.append(f"   👥 {authors}")
+        if p.get("recommendation_reason"):
+            posts.append(f"   🎯 {p['recommendation_reason']}")
         if summary:
             posts.append(f"   💡 {summary}")
         if doi:
@@ -75,7 +78,7 @@ def gen_posts(data):
 
     posts.append("")
     posts.append("💬 关注我，每天推送 AI+酶工程 最新论文进展！")
-    posts.append("🎯 数据来源：OpenAlex | 翻译：DeepSeek")
+    posts.append(f"🎯 数据来源：{sources} | 翻译：DeepSeek")
     return "\n".join(posts)
 
 def main():

@@ -32,7 +32,8 @@ def gen_article(data):
     lines.append(f"# 📄 AI+酶工程 每日文献速递")
     lines.append(f"")
     lines.append(f"> 生成日期：{date_str}")
-    lines.append(f"> 数据来源：OpenAlex | 共检索 {total} 篇，精选 {len(papers)} 篇")
+    sources = "、".join(data.get("enabled_sources", [])) or "OpenAlex"
+    lines.append(f"> 数据来源：{sources} | 对口候选 {total} 篇，精选 {len(papers)} 篇")
     lines.append(f"")
     lines.append(f"---")
     lines.append(f"")
@@ -70,6 +71,9 @@ def gen_article(data):
         lines.append(f"")
         lines.append(f"**📅 年份**：{p.get('year','')}　**📊 引用**：{p.get('citations',0)} 次")
         lines.append(f"")
+        if p.get("recommendation_reason"):
+            lines.append(f"**🎯 推荐理由**：{p['recommendation_reason']}")
+            lines.append(f"")
         if abstract_cn and abstract_cn not in ("[翻译失败]", ""):
             lines.append(f"**📝 摘要（中文）**：")
             lines.append(f"> {abstract_cn}")

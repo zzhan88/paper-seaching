@@ -89,7 +89,7 @@ def send_email(html_content, date_tag, is_test=False):
 
 def main():
     log.info("=" * 40); log.info("邮件发送(含附件)"); log.info("=" * 40)
-    is_test = "--test" in sys.argv
+    is_test = "--test" in sys.argv or os.environ.get("TEST_EMAIL", "").lower() in {"1", "true", "yes"}
 
     result = load_latest("daily_report_", ".html")
     if not result: sys.exit(1)

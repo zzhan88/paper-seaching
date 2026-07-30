@@ -12,10 +12,10 @@ log = logging.getLogger(__name__)
 STEPS = [
     ("daily_paper_list.py",  "抓取论文",      True),
     ("translate.py",         "摘要翻译",      False),
-    ("format_html.py",       "生成HTML",      False),
+    ("format_html.py",       "生成HTML",      True),
     ("format_wechat.py",     "微信文章",      False),
     ("format_xiaohongshu.py","小红书文案",    False),
-    ("send_email.py",        "发送邮件",      False),
+    ("send_email.py",        "发送邮件",      True),
 ]
 
 def run_step(script, label, required):

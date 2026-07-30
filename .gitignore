@@ -1,6 +1,8 @@
 ﻿# Python 缓存
 __pycache__/
 *.pyc
+.pycache_check/
+.local_test_deps/
 
 # 输出目录 — 只追踪去重记录文件
 output/*.md
