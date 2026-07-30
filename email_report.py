@@ -23,12 +23,15 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 TRACK_COLORS = {
-    "ai_design": ("#4f46e5", "#eef2ff"),
+    "foundation_models": ("#4f46e5", "#eef2ff"),
+    "generative_design": ("#7c3aed", "#f5f3ff"),
+    "protein_interactions": ("#be123c", "#fff1f2"),
+    "protein_ligand": ("#c2410c", "#fff7ed"),
+    "property_prediction": ("#b45309", "#fffbeb"),
+    "structure_function": ("#0369a1", "#f0f9ff"),
     "ml_evolution": ("#7c3aed", "#f5f3ff"),
-    "biocatalysis": ("#047857", "#ecfdf5"),
-    "enzyme_properties": ("#b45309", "#fffbeb"),
-    "mechanism": ("#0369a1", "#f0f9ff"),
     "enzyme_engineering": ("#0f766e", "#f0fdfa"),
+    "legacy_enzyme": ("#047857", "#ecfdf5"),
 }
 
 
@@ -56,10 +59,11 @@ def latest_data_file() -> str:
         for filename in os.listdir(OUTPUT_DIR):
             if filename.startswith(prefix) and filename.endswith(".json"):
                 date_tag = filename[len(prefix):-5]
-                candidates.append((date_tag, priority, os.path.join(OUTPUT_DIR, filename)))
+                path = os.path.join(OUTPUT_DIR, filename)
+                candidates.append((os.path.getmtime(path), date_tag, priority, path))
     if not candidates:
         raise FileNotFoundError("未找到 papers_raw_*.json 或 papers_translated_*.json")
-    return max(candidates)[2]
+    return max(candidates)[3]
 
 
 def load_latest_data() -> tuple[dict, str]:
@@ -85,6 +89,7 @@ def score_chips(paper: dict) -> str:
     breakdown = paper.get("score_breakdown") or {}
     chips = (
         ("主题", breakdown.get("topic")),
+        ("方法", breakdown.get("methodology")),
         ("期刊", breakdown.get("journal_scope")),
         ("新颖", breakdown.get("recency")),
     )
@@ -164,7 +169,7 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
             </div>
             <div class="why" style="border-left-color:{color};background:{pale}">
               <div class="why-label" style="color:{color}">为什么推荐</div>
-              <div>{esc(paper.get('recommendation_reason', '主题与酶工程方向匹配'))}</div>
+              <div>{esc(paper.get('recommendation_reason', 'AI方法与蛋白质任务匹配'))}</div>
               <div class="chips">{score_chips(paper)}</div>
             </div>
             <div class="abstract">
@@ -191,7 +196,7 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>AI+酶工程每日文献 {date_tag}</title>
+  <title>AI for Protein 每日文献 {date_tag}</title>
   <style>
     *{{box-sizing:border-box}} body{{margin:0;background:#eef2f7;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;font-size:16px;line-height:1.75}}
     a{{color:#1d4ed8;text-decoration:none}} .shell{{width:100%;padding:24px 10px}} .container{{max-width:720px;margin:0 auto}}
@@ -229,8 +234,8 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
   <div class="shell"><div class="container" id="top">
     <div class="hero">
       <div class="eyebrow">DAILY RESEARCH BRIEF</div>
-      <h1>AI × 酶工程 · 每日文献</h1>
-      <p class="hero-sub">{date_cn}　·　多源检索、主题准入、期刊适配后精选</p>
+      <h1>AI for Protein · 每日文献</h1>
+      <p class="hero-sub">{date_cn}　·　侧重蛋白质领域的新AI模型与方法学</p>
       <table class="stats" role="presentation"><tr>
         <td><strong>{len(papers)}</strong>今日精选</td>
         <td><strong>{esc(data.get('total_works', 0))}</strong>对口候选</td>
@@ -239,12 +244,12 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
     </div>
     <div class="intro">
       <h2>先看结论，再决定是否阅读全文</h2>
-      <p>本期从 {esc(source_text(data))} 聚合候选。论文需同时满足“酶/生物催化对象”和“设计、改造或性能评价行为”，并结合期刊方向、多样性与时效排序。</p>
+      <p>本期从 {esc(source_text(data))} 聚合候选，优先推荐提出新模型、框架、预训练或表征方法的论文，覆盖蛋白质设计、相互作用、蛋白–小分子结合，以及活性、稳定性和选择性预测；传统酶工程仅保留少量高相关结果。</p>
       <div class="summary-chips">{track_chips}</div>{source_notice}
     </div>
     <div class="overview"><h2>今日目录</h2><table role="presentation">{''.join(overview_rows)}</table></div>
     {''.join(cards)}
-    <div class="footer">生成于 {now.strftime('%Y-%m-%d %H:%M')} · 自动推荐仅用于科研信息筛选<br>AI+酶工程每日文献系统</div>
+    <div class="footer">生成于 {now.strftime('%Y-%m-%d %H:%M')} · 自动推荐仅用于科研信息筛选<br>AI for Protein 每日文献系统</div>
   </div></div>
 </body>
 </html>"""

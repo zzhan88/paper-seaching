@@ -9,7 +9,7 @@ class EmailReportTests(unittest.TestCase):
         self.data = {
             "total_works": 28,
             "enabled_sources": ["openalex", "pubmed", "crossref"],
-            "track_summary": {"AI辅助酶设计": 1},
+            "track_summary": {"蛋白质基础模型": 1},
             "source_failures": {},
             "papers": [{
                 "title": "AI-guided & experimentally validated enzyme design",
@@ -24,11 +24,13 @@ class EmailReportTests(unittest.TestCase):
                 "publication_date": "2026-07-29",
                 "citations": 2,
                 "sources": ["OpenAlex", "PubMed"],
-                "track": "ai_design",
-                "track_label": "AI辅助酶设计",
+                "track": "foundation_models",
+                "track_label": "蛋白质基础模型",
                 "article_kind": "研究论文",
                 "recommendation_reason": "标题聚焦酶；包含实验验证",
-                "score_breakdown": {"topic": 45, "journal_scope": 10, "recency": 19},
+                "score_breakdown": {
+                    "topic": 45, "methodology": 24, "journal_scope": 10, "recency": 19,
+                },
             }],
         }
 
@@ -39,6 +41,8 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("为什么推荐", result)
         self.assertIn("中文摘要速读", result)
         self.assertIn("打开论文 / DOI", result)
+        self.assertIn("AI for Protein", result)
+        self.assertIn("方法 24", result)
         self.assertNotIn("<details", result)
 
     def test_untrusted_text_is_escaped(self):

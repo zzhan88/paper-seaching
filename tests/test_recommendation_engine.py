@@ -17,12 +17,80 @@ class RecommendationEngineTests(unittest.TestCase):
         )
         self.assertTrue(result["eligible"])
         self.assertEqual(result["tier"], "core")
-        self.assertIn("AI", result["reason"])
+        self.assertTrue(result["is_ai_method"])
+
+    def test_protein_language_foundation_model_is_accepted(self):
+        result = assess_relevance(
+            "A multimodal protein language foundation model for sequence and structure",
+            "We introduce a new transformer framework with self-supervised pretraining "
+            "for protein function prediction and mutation-effect prediction.",
+        )
+        self.assertTrue(result["eligible"])
+        self.assertTrue(result["is_ai_method"])
+        self.assertEqual(result["track"], "foundation_models")
+        self.assertGreater(result["method_score"], 0)
+
+    def test_protein_protein_interaction_model_is_accepted(self):
+        result = assess_relevance(
+            "Geometric deep learning for protein-protein interaction prediction",
+            "Our novel equivariant neural network predicts complex interfaces and "
+            "binding sites from protein structures.",
+        )
+        self.assertTrue(result["eligible"])
+        self.assertEqual(result["track"], "protein_interactions")
+
+    def test_protein_ligand_binding_model_is_accepted(self):
+        result = assess_relevance(
+            "A diffusion framework for protein-ligand binding affinity prediction",
+            "The deep learning method jointly represents proteins and small molecules "
+            "for docking and virtual screening.",
+        )
+        self.assertTrue(result["eligible"])
+        self.assertEqual(result["track"], "protein_ligand")
+
+    def test_drug_target_representation_model_uses_ligand_track(self):
+        result = assess_relevance(
+            "A representation learning framework for drug-target interaction prediction",
+            "The deep learning model represents small molecules and protein targets.",
+        )
+        self.assertTrue(result["eligible"])
+        self.assertEqual(result["track"], "protein_ligand")
+
+    def test_enzyme_property_prediction_model_is_accepted(self):
+        result = assess_relevance(
+            "Machine learning predicts enzyme activity stability and selectivity",
+            "A new protein representation model predicts kcat, thermostability, "
+            "substrate specificity and mutation effects.",
+        )
+        self.assertTrue(result["eligible"])
+        self.assertEqual(result["track"], "property_prediction")
 
     def test_general_protein_database_paper_is_rejected(self):
         result = assess_relevance(
             "InterPro: the protein sequence classification resource in 2026",
             "A database for protein family annotation using artificial intelligence.",
+        )
+        self.assertFalse(result["eligible"])
+
+    def test_general_ai_method_without_protein_task_is_rejected(self):
+        result = assess_relevance(
+            "A new transformer for scientific document classification",
+            "The foundation model classifies papers and clinical notes.",
+        )
+        self.assertFalse(result["eligible"])
+
+    def test_protein_interaction_database_is_rejected(self):
+        result = assess_relevance(
+            "MPLID: a membrane protein-lipid interaction database",
+            "This experimental resource mentions deep learning models for "
+            "downstream protein-ligand prediction.",
+        )
+        self.assertFalse(result["eligible"])
+
+    def test_ai_only_mentioned_as_downstream_tool_is_rejected(self):
+        result = assess_relevance(
+            "A large-scale resource of residue-level protein contacts",
+            "The dataset can support deep learning for protein interaction prediction.",
         )
         self.assertFalse(result["eligible"])
 
@@ -104,13 +172,26 @@ class RecommendationEngineTests(unittest.TestCase):
         for index in range(4):
             assessment = {
                 "tier": "core",
-                "track": "enzyme_engineering" if index < 3 else "biocatalysis",
+                "track": "enzyme_engineering" if index < 3 else "foundation_models",
+                "is_ai_method": True,
             }
             record = {"venue": "Same Journal" if index < 3 else "Other Journal"}
             candidates.append((100 - index, f"k{index}", record, assessment, {}))
         selected = select_diverse(candidates)
         venues = [item[2]["venue"] for item in selected]
         self.assertEqual(venues.count("Same Journal"), 2)
+
+    def test_diversity_caps_non_ai_enzyme_papers(self):
+        candidates = []
+        for index in range(5):
+            assessment = {
+                "tier": "adjacent" if index < 3 else "core",
+                "track": "legacy_enzyme" if index < 3 else "foundation_models",
+                "is_ai_method": index >= 3,
+            }
+            candidates.append((100 - index, f"k{index}", {"venue": f"J{index}"}, assessment, {}))
+        selected = select_diverse(candidates)
+        self.assertLessEqual(sum(not item[3]["is_ai_method"] for item in selected), 2)
 
 
 if __name__ == "__main__":

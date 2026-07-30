@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""多源、可解释的 AI+酶工程文献推荐引擎。"""
+"""多源、可解释的 AI for Protein 方法学文献推荐引擎。"""
 
 from __future__ import annotations
 
@@ -31,6 +31,8 @@ MAX_PAPERS = 10
 MAX_ADJACENT = 2
 MAX_SAME_VENUE = 2
 MAX_SAME_TRACK = 4
+MAX_NON_AI = 2
+MAX_REVIEWS = 2
 SEARCH_WINDOWS = (7, 30, 90, 180, 365)
 IGNORE_SEEN = os.environ.get("IGNORE_SEEN", "").lower() in {"1", "true", "yes"}
 ENABLED_SOURCES = tuple(
@@ -40,20 +42,26 @@ ENABLED_SOURCES = tuple(
 )
 
 SEARCH_TOPICS = (
-    "machine learning guided enzyme engineering directed evolution",
-    "protein language model enzyme activity engineering",
-    "generative AI enzyme design catalytic activity",
-    "deep learning enzyme function substrate specificity",
-    "machine learning directed evolution enzyme optimization",
-    "computational enzyme design experimental validation",
-    "enzyme engineering thermostability catalytic activity",
-    "enzyme engineering substrate specificity catalytic efficiency",
-    "protein engineering enzyme stability activity",
-    "biocatalysis enzyme engineering synthesis",
-    "multi-enzyme cascade biocatalysis engineering",
-    "enzyme discovery characterization biocatalysis",
+    "protein language model foundation model",
+    "generative AI protein design diffusion",
+    "deep learning protein protein interaction prediction",
+    "AI protein ligand binding affinity prediction",
+    "machine learning enzyme activity stability selectivity prediction",
+    "geometric deep learning protein structure function",
+    "self supervised protein representation learning",
+    "AI protein engineering experimental validation",
+    "multimodal protein sequence structure model",
+    "deep learning protein small molecule docking scoring",
+    "machine learning directed evolution fitness landscape",
+    "generative AI antibody peptide protein design",
+    "computational enzyme design AI catalytic activity",
+    "protein mutation effect stability function prediction",
 )
 
+PROTEIN_TERMS = (
+    "protein", "proteome", "peptide", "antibody", "enzyme", "enzymatic",
+    "biocatal", "amino acid sequence", "protein sequence", "protein structure",
+)
 ENZYME_TERMS = (
     "enzyme", "enzymatic", "biocatal", "catalytic protein", "active site",
     "catalytic activity", "catalytic efficiency", "kcat",
@@ -75,7 +83,26 @@ BIOCAT_APPLICATION_TERMS = (
 AI_TERMS = (
     "machine learning", "deep learning", "artificial intelligence",
     "neural network", "transformer", "language model", "diffusion",
-    "generative", "graph neural", "proteinmpnn", "alphafold",
+    "generative", "graph neural", "geometric deep learning",
+    "equivariant", "foundation model", "representation learning",
+    "self supervised", "multimodal", "proteinmpnn", "alphafold",
+)
+METHOD_TERMS = (
+    "new model", "novel model", "model architecture", "framework", "method",
+    "pretrain", "fine tuning", "zero shot", "few shot", "foundation model",
+    "representation learning", "self supervised", "multimodal", "benchmark",
+    "generaliz", "transfer learning", "contrastive learning", "equivariant",
+    "geometric deep learning", "diffusion", "transformer",
+)
+AI_TASK_TERMS = (
+    "protein design", "sequence design", "structure prediction",
+    "function prediction", "property prediction", "mutation effect",
+    "variant effect", "fitness landscape", "protein protein interaction",
+    "protein interaction", "binding site", "binding affinity", "protein ligand",
+    "small molecule", "docking", "virtual screening", "activity prediction",
+    "drug target", "drug protein",
+    "stability prediction", "thermostability", "specificity", "selectivity",
+    "enzyme activity", "catalytic activity", "kinetic", "kcat",
 )
 EXPERIMENT_TERMS = (
     "experimental", "assay", "validated", "validation", "expressed",
@@ -85,6 +112,8 @@ HARD_EXCLUDE_TITLE = (
     "nanozyme", "enzyme-like nanoparticle", "medical image",
     "clinical trial", "knowledgebase", "database resource",
     "protein sequence classification resource", "proteome resource",
+    "protein structure database", "protein knowledge base",
+    "interaction database", "protein database", "peptide database",
     "nanocatalyst", "sonocatal", "photocatal", "2d material",
     "colorimetric detection", "colorimetric sensor",
 )
@@ -96,30 +125,55 @@ OFF_TOPIC_TERMS = (
 REVIEW_TERMS = ("review", "perspective", "outlook", "opportunities and challenges")
 
 TRACKS = {
-    "ai_design": ("AI辅助酶设计", AI_TERMS + ("design", "generative")),
+    "foundation_models": (
+        "蛋白质基础模型",
+        ("language model", "foundation model", "pretrain", "representation learning",
+         "self supervised", "multimodal", "transformer"),
+    ),
+    "generative_design": (
+        "生成式蛋白设计",
+        ("generative", "diffusion", "protein design", "sequence design", "proteinmpnn"),
+    ),
+    "protein_interactions": (
+        "蛋白质相互作用",
+        ("protein protein interaction", "protein interaction", "protein rna",
+         "protein peptide", "complex", "interface", "antibody", "peptide binding"),
+    ),
+    "protein_ligand": (
+        "蛋白–小分子结合",
+        ("protein ligand", "small molecule", "binding affinity", "docking",
+         "virtual screening", "binding site", "drug target", "drug protein"),
+    ),
+    "property_prediction": (
+        "活性·稳定性·选择性预测",
+        ("activity prediction", "stability prediction", "thermostability",
+         "specificity", "selectivity", "mutation effect", "variant effect", "kcat"),
+    ),
+    "structure_function": (
+        "结构与功能预测",
+        ("structure prediction", "function prediction", "folding", "structure function",
+         "geometric deep learning", "equivariant"),
+    ),
     "ml_evolution": (
         "机器学习与定向进化",
         ("machine learning", "directed evolution", "fitness landscape", "screening"),
     ),
-    "biocatalysis": (
-        "生物催化与级联",
-        ("biocatal", "cascade", "biotransformation", "biosynthesis", "synthesis"),
-    ),
-    "enzyme_properties": (
-        "酶性能与稳定性改造",
-        ("stability", "thermostability", "activity", "specificity", "selectivity", "kcat"),
-    ),
-    "mechanism": (
-        "结构与催化机制",
-        ("active site", "mechanism", "molecular dynamics", "structure-guided"),
-    ),
     "enzyme_engineering": (
-        "酶工程与发现",
-        ("enzyme engineering", "protein engineering", "mutagen", "variant", "characterization"),
+        "AI辅助酶工程",
+        ("enzyme engineering", "enzyme design", "biocatal", "catalytic activity",
+         "directed evolution", "fitness landscape"),
+    ),
+    "legacy_enzyme": (
+        "酶工程与生物催化",
+        ("enzyme engineering", "protein engineering", "biocatal", "mutagen",
+         "variant", "characterization"),
     ),
 }
 
 CORE_SCOPE_JOURNALS = {
+    "Nature Methods", "Nature Machine Intelligence", "Bioinformatics",
+    "PLOS Computational Biology", "Briefings in Bioinformatics",
+    "Journal of Computational Biology", "Machine Learning: Science and Technology",
     "ACS Catalysis", "Nature Catalysis", "Enzyme and Microbial Technology",
     "Protein Engineering, Design and Selection", "Biotechnology and Bioengineering",
     "Applied Microbiology and Biotechnology", "Journal of Biotechnology",
@@ -130,7 +184,7 @@ CORE_SCOPE_JOURNALS = {
     "Bioresource Technology", "Synthetic and Systems Biotechnology",
 }
 ADJACENT_SCOPE_JOURNALS = {
-    "Nature Biotechnology", "Nature Chemical Biology", "Nature Methods",
+    "Nature Biotechnology", "Nature Chemical Biology",
     "Cell Chemical Biology", "Journal of Biological Chemistry",
     "Protein Science", "Structure", "Journal of Molecular Biology",
     "Journal of Chemical Information and Modeling",
@@ -249,7 +303,7 @@ def openalex_batch(queries: tuple[str, ...], start_date: str, end_date: str) -> 
             "per_page": 25,
             "filter": (
                 f"from_publication_date:{start_date},to_publication_date:{end_date},"
-                "type:article,language:en"
+                "language:en"
             ),
             "select": (
                 "id,doi,title,authorships,primary_location,publication_date,"
@@ -400,7 +454,7 @@ def crossref_batch(queries: tuple[str, ...], start_date: str, end_date: str) -> 
     for query in queries[:8]:
         data = request_json(session, "https://api.crossref.org/works", {
             "query.bibliographic": query,
-            "filter": f"from-pub-date:{start_date},until-pub-date:{end_date},type:journal-article",
+            "filter": f"from-pub-date:{start_date},until-pub-date:{end_date}",
             "rows": 25,
             "sort": "published",
             "order": "desc",
@@ -534,20 +588,32 @@ def phrase_hits(text: str, phrases: tuple[str, ...]) -> set[str]:
     return {phrase for phrase in phrases if normalize_text(phrase) in text}
 
 
-def choose_track(text: str) -> str:
-    has_ai = bool(phrase_hits(text, AI_TERMS))
-    if has_ai and phrase_hits(
-        text,
-        ("directed evolution", "mutagen", "mutation", "variant", "fitness landscape", "screening"),
-    ):
-        return "ml_evolution"
-    if has_ai:
-        return "ai_design"
+def choose_track(text: str, title_text: str = "") -> str:
+    priority = (
+        "protein_interactions",
+        "protein_ligand",
+        "property_prediction",
+        "generative_design",
+        "ml_evolution",
+        "enzyme_engineering",
+        "structure_function",
+        "foundation_models",
+    )
+    for haystack in (title_text, text):
+        if not haystack:
+            continue
+        for key in priority:
+            if phrase_hits(haystack, TRACKS[key][1]):
+                return key
     scores = {
         key: len(phrase_hits(text, phrases))
         for key, (_, phrases) in TRACKS.items()
     }
-    return max(scores, key=scores.get) if max(scores.values()) else "enzyme_engineering"
+    if phrase_hits(text, AI_TERMS):
+        scores["legacy_enzyme"] = -1
+    else:
+        return "legacy_enzyme"
+    return max(scores, key=scores.get) if max(scores.values()) else "foundation_models"
 
 
 def assess_relevance(title: str, abstract: str) -> dict:
@@ -562,6 +628,8 @@ def assess_relevance(title: str, abstract: str) -> dict:
             "reason": f"标题命中排除主题：{sorted(hard_exclusions)[0]}",
         }
 
+    protein_title = phrase_hits(title_text, PROTEIN_TERMS)
+    protein_all = phrase_hits(full_text, PROTEIN_TERMS)
     enzyme_title = phrase_hits(title_text, ENZYME_TERMS)
     enzyme_all = phrase_hits(full_text, ENZYME_TERMS)
     modification_title = phrase_hits(title_text, MODIFICATION_TERMS)
@@ -572,17 +640,25 @@ def assess_relevance(title: str, abstract: str) -> dict:
     biocatalysis_all = phrase_hits(full_text, BIOCAT_APPLICATION_TERMS)
     ai_title = phrase_hits(title_text, AI_TERMS)
     ai_all = phrase_hits(full_text, AI_TERMS)
+    method_title = phrase_hits(title_text, METHOD_TERMS)
+    method_all = phrase_hits(full_text, METHOD_TERMS)
+    task_title = phrase_hits(title_text, AI_TASK_TERMS)
+    task_all = phrase_hits(full_text, AI_TASK_TERMS)
     experiment_all = phrase_hits(full_text, EXPERIMENT_TERMS)
     off_topic = phrase_hits(full_text, OFF_TOPIC_TERMS)
     medical_title = phrase_hits(title_text, ("cancer", "tumor", "therapy", "clinical", "patient"))
 
-    if not enzyme_all:
+    if not protein_all:
         return {
             "eligible": False, "tier": "excluded", "topic_score": 0,
             "track": "excluded", "track_label": "排除",
-            "reason": "缺少酶、生物催化或催化位点研究对象",
+            "reason": "缺少明确的蛋白质、肽、抗体或酶研究对象",
         }
-    has_engineering_action = bool(
+
+    has_ai_method = bool(ai_all and task_all and (ai_title or method_all))
+    has_legacy_engineering = bool(
+        enzyme_all
+        and (
         modification_all
         or (
             enzyme_title
@@ -593,59 +669,63 @@ def assess_relevance(title: str, abstract: str) -> dict:
             biocatalysis_title
             and (experiment_all or performance_all)
         )
+        )
     )
-    if not has_engineering_action:
+    if not has_ai_method and not has_legacy_engineering:
         return {
             "eligible": False, "tier": "excluded", "topic_score": 0,
             "track": "excluded", "track_label": "排除",
-            "reason": "缺少明确的设计改造操作或酶性能验证",
+            "reason": "缺少AI方法及蛋白质任务，或缺少明确的酶工程行为",
         }
-    if medical_title and not modification_title:
+    if medical_title and not (ai_title and task_title) and not modification_title:
         return {
             "eligible": False, "tier": "excluded", "topic_score": 0,
             "track": "excluded", "track_label": "排除",
-            "reason": "医学/治疗主题占主导且标题未体现酶工程",
+            "reason": "医学/治疗主题占主导且标题未体现蛋白质AI方法",
         }
-    if len(off_topic) >= 2 and not enzyme_title and not modification_title:
+    if len(off_topic) >= 2 and not protein_title and not ai_title:
         return {
             "eligible": False, "tier": "excluded", "topic_score": 0,
             "track": "excluded", "track_label": "排除",
-            "reason": "医学/治疗主题占主导且标题未体现酶工程",
+            "reason": "医学/治疗主题占主导且标题未体现蛋白质AI方法",
         }
 
     topic_score = (
-        min(18, len(enzyme_title) * 6 + len(enzyme_all) * 2)
-        + min(18, len(modification_title) * 6 + len(modification_all) * 3)
-        + min(8, len(performance_title) * 3 + len(performance_all))
-        + min(6, len(biocatalysis_title) * 4 + len(biocatalysis_all))
-        + min(10, len(ai_title) * 4 + len(ai_all) * 2)
+        min(12, len(protein_title) * 5 + len(protein_all))
+        + min(16, len(ai_title) * 6 + len(ai_all) * 2)
+        + min(14, len(task_title) * 5 + len(task_all) * 2)
+        + min(8, len(modification_title) * 3 + len(modification_all))
         + min(4, len(experiment_all))
         - min(10, len(off_topic) * 3)
     )
     topic_score = max(1, min(50, topic_score))
-    tier = (
-        "core"
-        if (enzyme_title and (modification_title or performance_title))
-        or (biocatalysis_title and modification_all)
-        or topic_score >= 30
-        else "adjacent"
-    )
-    track = choose_track(full_text)
+    method_score = min(
+        20,
+        len(method_title) * 6 + len(method_all) * 2 + (5 if ai_title else 0),
+    ) if has_ai_method else 0
+    is_review = bool(phrase_hits(title_text, REVIEW_TERMS + ("retrospective", "bibliometric")))
+    tier = "core" if has_ai_method else "adjacent"
+    track = choose_track(full_text, title_text)
     evidence = []
-    if enzyme_title:
-        evidence.append("标题聚焦酶或生物催化")
-    if modification_title or (performance_title and modification_all):
-        evidence.append("标题体现设计或性能改造")
-    if ai_all:
-        evidence.append("采用AI/机器学习")
+    if method_title:
+        evidence.append("标题突出新模型、框架或学习方法")
+    elif has_ai_method:
+        evidence.append("AI方法面向明确的蛋白质任务")
+    if task_title:
+        evidence.append("标题聚焦" + TRACKS[track][0])
+    elif protein_title:
+        evidence.append("标题明确聚焦蛋白质领域")
     if experiment_all:
         evidence.append("包含实验或动力学验证")
     if not evidence:
-        evidence.append("摘要同时满足酶对象与工程行为")
+        evidence.append("保留的传统酶工程/生物催化论文")
     return {
         "eligible": True,
         "tier": tier,
         "topic_score": topic_score,
+        "method_score": method_score,
+        "is_ai_method": has_ai_method,
+        "is_review": is_review,
         "track": track,
         "track_label": TRACKS[track][0],
         "reason": "；".join(evidence[:3]),
@@ -661,7 +741,10 @@ def journal_fit(venue: str, journal_info: dict | None) -> dict:
     if name in BROAD_SCOPE_JOURNALS:
         return {"level": "综合期刊·按主题入选", "scope_score": 4}
     normalized = normalize_text(name)
-    if any(term in normalized for term in ("enzyme", "catal", "biotech", "protein", "biochem")):
+    if any(term in normalized for term in (
+        "enzyme", "catal", "biotech", "protein", "biochem", "bioinform",
+        "computational biology", "machine learning", "artificial intelligence",
+    )):
         return {"level": "方向对口", "scope_score": 6}
     return {"level": "交叉方向", "scope_score": 2}
 
@@ -683,12 +766,19 @@ def score_record(record: dict, database: list[dict], assessment: dict) -> tuple[
     if info:
         quality_score += min(2.5, math.log1p(max(0, info["if"])) / 1.5)
         quality_score += {"一区": 1.5, "二区": 1.0, "三区": 0.5}.get(info["cas_rank"], 0)
-    topic_component = assessment["topic_score"] * 1.2
-    total = topic_component + recency_score + citation_score + fit["scope_score"] + quality_score
+    topic_component = assessment["topic_score"]
+    method_component = assessment.get("method_score", 0) * 1.5
+    total = (
+        topic_component + method_component + recency_score
+        + citation_score + fit["scope_score"] + quality_score
+    )
     if assessment["tier"] == "adjacent":
         total -= 8
+    if assessment.get("is_review"):
+        total -= 15
     breakdown = {
         "topic": round(topic_component, 1),
+        "methodology": round(method_component, 1),
         "recency": round(recency_score, 1),
         "citation": round(citation_score, 1),
         "journal_scope": fit["scope_score"],
@@ -723,6 +813,7 @@ def build_entry(record: dict, database: list[dict], assessment: dict, score: flo
         "sources": record.get("sources") or [],
         "source": " + ".join(record.get("sources") or []),
         "relevance_tier": assessment["tier"],
+        "is_ai_method": assessment.get("is_ai_method", False),
         "track": assessment["track"],
         "track_label": assessment["track_label"],
         "recommendation_reason": assessment["reason"],
@@ -730,7 +821,7 @@ def build_entry(record: dict, database: list[dict], assessment: dict, score: flo
         "score_breakdown": breakdown,
         "article_kind": (
             "综述/观点"
-            if any(term in normalize_text(title) for term in REVIEW_TERMS)
+            if assessment.get("is_review")
             else "研究论文"
         ),
     }
@@ -741,6 +832,8 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
     venue_counts = Counter()
     track_counts = Counter()
     adjacent_count = 0
+    non_ai_count = 0
+    review_count = 0
     for item in candidates:
         _, key, record, assessment, _ = item
         venue = normalize_text(record.get("venue")) or "unknown"
@@ -750,10 +843,16 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
             continue
         if assessment["tier"] == "adjacent" and adjacent_count >= MAX_ADJACENT:
             continue
+        if not assessment.get("is_ai_method") and non_ai_count >= MAX_NON_AI:
+            continue
+        if assessment.get("is_review") and review_count >= MAX_REVIEWS:
+            continue
         selected.append(item)
         venue_counts[venue] += 1
         track_counts[assessment["track"]] += 1
         adjacent_count += assessment["tier"] == "adjacent"
+        non_ai_count += not assessment.get("is_ai_method")
+        review_count += assessment.get("is_review", False)
         if len(selected) == MAX_PAPERS:
             return selected
     selected_keys = {item[1] for item in selected}
@@ -764,10 +863,16 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
             continue
         if assessment["tier"] == "adjacent" and adjacent_count >= MAX_ADJACENT:
             continue
+        if not assessment.get("is_ai_method") and non_ai_count >= MAX_NON_AI:
+            continue
+        if assessment.get("is_review") and review_count >= MAX_REVIEWS:
+            continue
         selected.append(item)
         selected_keys.add(key)
         venue_counts[venue] += 1
         adjacent_count += assessment["tier"] == "adjacent"
+        non_ai_count += not assessment.get("is_ai_method")
+        review_count += assessment.get("is_review", False)
         if len(selected) == MAX_PAPERS:
             break
     return selected
@@ -775,7 +880,7 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
 
 def main() -> None:
     log.info("=" * 62)
-    log.info("AI+酶工程每日文献 v5：多源检索 + 主题准入 + 期刊适配")
+    log.info("AI for Protein 每日文献 v6：多源检索 + AI方法准入 + 任务覆盖")
     log.info("来源: %s；忽略历史: %s", ", ".join(ENABLED_SOURCES), IGNORE_SEEN)
     log.info("=" * 62)
     database = load_json(JOURNALS_DB)
@@ -839,7 +944,7 @@ def main() -> None:
         "total_works": len(eligible),
         "eligible_new_works": len(new_records),
         "search_days": search_days,
-        "selection_method": "multi-source+topic-gate-v5+journal-scope+diversity",
+        "selection_method": "multi-source+ai-protein-method-gate-v6+journal-scope+diversity",
         "enabled_sources": list(ENABLED_SOURCES),
         "source_summary": source_summary,
         "source_failures": failures,
