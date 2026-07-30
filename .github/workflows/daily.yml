@@ -64,7 +64,7 @@ jobs:
         if: always()
         shell: bash
         run: |
-          echo "## AI for Protein 文献推送" >> "$GITHUB_STEP_SUMMARY"
+          echo "## 酶工程 + AI for Protein 文献推送" >> "$GITHUB_STEP_SUMMARY"
           echo "- 模式：$([ \"$TEST_EMAIL\" = \"1\" ] && echo '测试邮件' || echo '每日正式推送')" >> "$GITHUB_STEP_SUMMARY"
           echo "- 数据源：OpenAlex、PubMed、Crossref" >> "$GITHUB_STEP_SUMMARY"
           echo "- 运行状态：${{ job.status }}" >> "$GITHUB_STEP_SUMMARY"

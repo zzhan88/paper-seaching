@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""AI for Protein 每日文献清单兼容入口。"""
+"""酶工程 + AI for Protein 每日文献清单兼容入口。"""
 import json, logging, os, sys, time, traceback
 from datetime import datetime, timedelta
 from typing import Any, Optional
@@ -228,7 +228,7 @@ def build_entry(w, db, published_today=False):
     }
 
 def main():
-    log.info("="*50); log.info("AI for Protein 每日文献清单（旧版兼容实现）"); log.info("="*50)
+    log.info("="*50); log.info("酶工程 + AI for Protein 文献清单（旧版兼容实现）"); log.info("="*50)
     db=load_journals_db(JOURNALS_DB)
 
     # 加载历史记录，排除已发过的论文

@@ -24,7 +24,7 @@ def gen_posts(data):
     total = data.get("total_works", 0)
 
     posts = []
-    posts.append(f"【AI for Protein 每日文献速递 {date_tag}】")
+    posts.append(f"【酶工程 + AI for Protein 每日文献速递 {date_tag}】")
     sources = "、".join(data.get("enabled_sources", [])) or "OpenAlex"
     posts.append(f"📊 今日从 {sources} 获得 {total} 篇对口候选，精选 {len(papers)} 篇")
     posts.append("")
@@ -51,7 +51,7 @@ def gen_posts(data):
         elif ab_en:
             summary = ab_en[:200] + "..."
 
-        tags = ["#AIforProtein", "#蛋白质AI", "#计算生物学"]
+        tags = ["#酶工程", "#AIforProtein", "#蛋白质工程"]
         if "deep learning" in (p.get("abstract","") + p.get("title","")).lower():
             tags.append("#深度学习")
         if "language model" in (p.get("abstract","") + p.get("title","")).lower():
@@ -77,7 +77,7 @@ def gen_posts(data):
             posts.append("")
 
     posts.append("")
-    posts.append("💬 关注我，每天推送 AI for Protein 最新模型与方法！")
+    posts.append("💬 关注我，每天推送酶工程与 AI for Protein 最新论文！")
     posts.append(f"🎯 数据来源：{sources} | 翻译：DeepSeek")
     return "\n".join(posts)
 

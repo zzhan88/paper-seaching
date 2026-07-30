@@ -10,6 +10,7 @@ class EmailReportTests(unittest.TestCase):
             "total_works": 28,
             "enabled_sources": ["openalex", "pubmed", "crossref"],
             "track_summary": {"蛋白质基础模型": 1},
+            "family_summary": {"AI for Protein": 1},
             "source_failures": {},
             "papers": [{
                 "title": "AI-guided & experimentally validated enzyme design",
@@ -41,8 +42,9 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("为什么推荐", result)
         self.assertIn("中文摘要速读", result)
         self.assertIn("打开论文 / DOI", result)
-        self.assertIn("AI for Protein", result)
-        self.assertIn("方法 24", result)
+        self.assertIn("酶工程 × AI for Protein", result)
+        self.assertIn("AI方法 24", result)
+        self.assertIn("AI for Protein <strong>1</strong>", result)
         self.assertNotIn("<details", result)
 
     def test_untrusted_text_is_escaped(self):
@@ -50,6 +52,15 @@ class EmailReportTests(unittest.TestCase):
         result = gen_html(self.data)
         self.assertNotIn("<script>", result)
         self.assertIn("&lt;script&gt;", result)
+
+    def test_enzyme_paper_shows_engineering_score_not_zero_ai_score(self):
+        paper = self.data["papers"][0]
+        paper["topic_family"] = "enzyme_engineering"
+        paper["score_breakdown"]["methodology"] = 0
+        paper["score_breakdown"]["engineering"] = 27
+        result = gen_html(self.data)
+        self.assertIn("酶工程 27", result)
+        self.assertNotIn("AI方法 0", result)
 
     def test_compact_prefers_sentence_boundary(self):
         value = "第一句内容。" + "第二句内容很长。" * 30

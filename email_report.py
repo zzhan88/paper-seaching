@@ -87,12 +87,15 @@ def source_text(data: dict) -> str:
 
 def score_chips(paper: dict) -> str:
     breakdown = paper.get("score_breakdown") or {}
-    chips = (
-        ("主题", breakdown.get("topic")),
-        ("方法", breakdown.get("methodology")),
+    chips = [("主题", breakdown.get("topic"))]
+    if breakdown.get("methodology"):
+        chips.append(("AI方法", breakdown["methodology"]))
+    if breakdown.get("engineering"):
+        chips.append(("酶工程", breakdown["engineering"]))
+    chips.extend((
         ("期刊", breakdown.get("journal_scope")),
         ("新颖", breakdown.get("recency")),
-    )
+    ))
     return "".join(
         f'<span class="score-chip">{esc(label)} {esc(value)}</span>'
         for label, value in chips if value is not None
@@ -107,6 +110,10 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
     track_summary = data.get("track_summary") or dict(
         Counter(paper.get("track_label", "其他") for paper in papers)
     )
+    family_summary = data.get("family_summary") or dict(Counter(
+        "AI for Protein" if paper.get("topic_family") == "ai_for_protein" else "酶工程"
+        for paper in papers
+    ))
     failures = data.get("source_failures") or {}
     source_notice = ""
     if failures:
@@ -186,6 +193,10 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
         f'<span class="summary-chip">{esc(label)} <strong>{count}</strong></span>'
         for label, count in track_summary.items()
     )
+    family_chips = "".join(
+        f'<span class="summary-chip family-chip">{esc(label)} <strong>{count}</strong></span>'
+        for label, count in family_summary.items()
+    )
     translated_count = sum(
         bool(paper.get("abstract_cn") and paper.get("abstract_cn") != "[翻译失败]")
         for paper in papers
@@ -196,7 +207,7 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
-  <title>AI for Protein 每日文献 {date_tag}</title>
+  <title>酶工程 + AI for Protein 每日文献 {date_tag}</title>
   <style>
     *{{box-sizing:border-box}} body{{margin:0;background:#eef2f7;color:#172033;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Arial,sans-serif;font-size:16px;line-height:1.75}}
     a{{color:#1d4ed8;text-decoration:none}} .shell{{width:100%;padding:24px 10px}} .container{{max-width:720px;margin:0 auto}}
@@ -207,6 +218,7 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
     .stats strong{{display:block;color:#fff;font-size:21px;line-height:1.2}} .intro,.overview{{background:#fff;border:1px solid #dfe7f0;border-radius:16px;padding:22px;margin-top:16px}}
     .intro h2,.overview h2{{font-size:18px;margin:0 0 8px;color:#102a43}} .intro p{{margin:0;color:#526477;font-size:14px}}
     .summary-chips{{margin-top:13px}} .summary-chip{{display:inline-block;background:#f1f5f9;color:#334155;border-radius:999px;padding:4px 10px;margin:3px 5px 3px 0;font-size:12px}}
+    .family-chip{{background:#e0f2fe;color:#075985;font-size:13px}}
     .notice{{margin-top:14px;background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px 12px;border-radius:10px;font-size:13px}}
     .overview table{{width:100%;border-collapse:collapse}} .overview td{{border-top:1px solid #edf1f5;padding:11px 4px;vertical-align:middle}} .overview tr:first-child td{{border-top:0}}
     .overview-num{{width:38px;color:#64748b;font-weight:700}} .overview-title{{display:block;color:#1e293b;font-weight:700;line-height:1.45}}
@@ -234,8 +246,8 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
   <div class="shell"><div class="container" id="top">
     <div class="hero">
       <div class="eyebrow">DAILY RESEARCH BRIEF</div>
-      <h1>AI for Protein · 每日文献</h1>
-      <p class="hero-sub">{date_cn}　·　侧重蛋白质领域的新AI模型与方法学</p>
+      <h1>酶工程 × AI for Protein</h1>
+      <p class="hero-sub">{date_cn}　·　两个并列主题的最新 {len(papers)} 篇文献</p>
       <table class="stats" role="presentation"><tr>
         <td><strong>{len(papers)}</strong>今日精选</td>
         <td><strong>{esc(data.get('total_works', 0))}</strong>对口候选</td>
@@ -244,12 +256,13 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
     </div>
     <div class="intro">
       <h2>先看结论，再决定是否阅读全文</h2>
-      <p>本期从 {esc(source_text(data))} 聚合候选，优先推荐提出新模型、框架、预训练或表征方法的论文，覆盖蛋白质设计、相互作用、蛋白–小分子结合，以及活性、稳定性和选择性预测；传统酶工程仅保留少量高相关结果。</p>
+      <p>本期从 {esc(source_text(data))} 聚合候选，同时检索酶设计、改造、定向进化、生物催化和性能优化，以及蛋白质基础模型、生成式设计、相互作用、结合与性质预测。两类主题并列参与排序，共同选出最新 {len(papers)} 篇。</p>
+      <div class="summary-chips">{family_chips}</div>
       <div class="summary-chips">{track_chips}</div>{source_notice}
     </div>
     <div class="overview"><h2>今日目录</h2><table role="presentation">{''.join(overview_rows)}</table></div>
     {''.join(cards)}
-    <div class="footer">生成于 {now.strftime('%Y-%m-%d %H:%M')} · 自动推荐仅用于科研信息筛选<br>AI for Protein 每日文献系统</div>
+    <div class="footer">生成于 {now.strftime('%Y-%m-%d %H:%M')} · 自动推荐仅用于科研信息筛选<br>酶工程 + AI for Protein 每日文献系统</div>
   </div></div>
 </body>
 </html>"""

@@ -1,6 +1,7 @@
 import unittest
 
 from recommendation_engine import (
+    SEARCH_TOPICS,
     assess_relevance,
     journal_fit,
     lookup_journal,
@@ -10,6 +11,13 @@ from recommendation_engine import (
 
 
 class RecommendationEngineTests(unittest.TestCase):
+    def test_pubmed_and_crossref_query_slice_contains_both_topics(self):
+        first_eight = " ".join(SEARCH_TOPICS[:8]).lower()
+        self.assertIn("enzyme engineering", first_eight)
+        self.assertIn("protein language model", first_eight)
+        self.assertIn("biocatalysis", first_eight)
+        self.assertIn("protein ligand", first_eight)
+
     def test_core_enzyme_engineering_paper_is_accepted(self):
         result = assess_relevance(
             "Machine learning-guided enzyme engineering improves thermostability",
@@ -18,6 +26,17 @@ class RecommendationEngineTests(unittest.TestCase):
         self.assertTrue(result["eligible"])
         self.assertEqual(result["tier"], "core")
         self.assertTrue(result["is_ai_method"])
+
+    def test_non_ai_enzyme_engineering_is_equal_core_topic(self):
+        result = assess_relevance(
+            "Engineering enzyme thermostability and substrate selectivity by mutagenesis",
+            "Variants were expressed and validated by activity and kinetic assays.",
+        )
+        self.assertTrue(result["eligible"])
+        self.assertEqual(result["tier"], "core")
+        self.assertFalse(result["is_ai_method"])
+        self.assertEqual(result["topic_family"], "enzyme_engineering")
+        self.assertGreater(result["engineering_score"], 0)
 
     def test_protein_language_foundation_model_is_accepted(self):
         result = assess_relevance(
@@ -181,17 +200,18 @@ class RecommendationEngineTests(unittest.TestCase):
         venues = [item[2]["venue"] for item in selected]
         self.assertEqual(venues.count("Same Journal"), 2)
 
-    def test_diversity_caps_non_ai_enzyme_papers(self):
+    def test_non_ai_enzyme_papers_are_not_capped_to_two(self):
         candidates = []
-        for index in range(5):
+        for index in range(6):
             assessment = {
-                "tier": "adjacent" if index < 3 else "core",
-                "track": "legacy_enzyme" if index < 3 else "foundation_models",
-                "is_ai_method": index >= 3,
+                "tier": "core",
+                "track": "legacy_enzyme",
+                "is_ai_method": False,
+                "is_review": False,
             }
             candidates.append((100 - index, f"k{index}", {"venue": f"J{index}"}, assessment, {}))
         selected = select_diverse(candidates)
-        self.assertLessEqual(sum(not item[3]["is_ai_method"] for item in selected), 2)
+        self.assertEqual(sum(not item[3]["is_ai_method"] for item in selected), 6)
 
 
 if __name__ == "__main__":

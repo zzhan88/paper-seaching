@@ -1,5 +1,5 @@
 ﻿#!/usr/bin/env python3
-"""run_all.py — AI for Protein 全流程调度：抓取→翻译→生成HTML→微信→小红书→发送邮件"""
+"""run_all.py — 酶工程 + AI for Protein 全流程调度。"""
 
 import logging, os, subprocess, sys, time
 
@@ -39,7 +39,7 @@ def run_step(script, label, required):
             log.warning("此步骤为可选步骤，继续执行后续步骤"); return True
 
 def main():
-    log.info("="*50); log.info("AI for Protein 每日文献推送 \u2014 \u5168\u6d41\u7a0b"); log.info("="*50)
+    log.info("="*50); log.info("酶工程 + AI for Protein 每日文献推送 \u2014 \u5168\u6d41\u7a0b"); log.info("="*50)
     all_ok = True
     for script, label, required in STEPS:
         ok = run_step(script, label, required)

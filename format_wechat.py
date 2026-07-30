@@ -29,7 +29,7 @@ def gen_article(data):
     total = data.get("total_works", 0)
 
     lines = []
-    lines.append(f"# 📄 AI for Protein 每日文献速递")
+    lines.append(f"# 📄 酶工程 + AI for Protein 每日文献速递")
     lines.append(f"")
     lines.append(f"> 生成日期：{date_str}")
     sources = "、".join(data.get("enabled_sources", [])) or "OpenAlex"
@@ -84,7 +84,7 @@ def gen_article(data):
         lines.append(f"---")
         lines.append(f"")
 
-    lines.append(f"*由 AI for Protein 每日文献推送系统自动生成 · {today.strftime('%Y-%m-%d %H:%M')}*")
+    lines.append(f"*由酶工程 + AI for Protein 每日文献推送系统自动生成 · {today.strftime('%Y-%m-%d %H:%M')}*")
     return "\n".join(lines)
 
 def main():

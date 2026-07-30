@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""多源、可解释的 AI for Protein 方法学文献推荐引擎。"""
+"""多源、可解释的酶工程 + AI for Protein 文献推荐引擎。"""
 
 from __future__ import annotations
 
@@ -28,10 +28,8 @@ OUTPUT_DIR = os.path.join(WORK_DIR, "output")
 JOURNALS_DB = os.path.join(WORK_DIR, "journals_db.json")
 SEEN_FILE = os.path.join(OUTPUT_DIR, "seen_papers.json")
 MAX_PAPERS = 10
-MAX_ADJACENT = 2
 MAX_SAME_VENUE = 2
 MAX_SAME_TRACK = 4
-MAX_NON_AI = 2
 MAX_REVIEWS = 2
 SEARCH_WINDOWS = (7, 30, 90, 180, 365)
 IGNORE_SEEN = os.environ.get("IGNORE_SEEN", "").lower() in {"1", "true", "yes"}
@@ -43,19 +41,24 @@ ENABLED_SOURCES = tuple(
 
 SEARCH_TOPICS = (
     "protein language model foundation model",
+    "enzyme engineering thermostability activity specificity",
     "generative AI protein design diffusion",
+    "directed evolution protein engineering enzyme optimization",
     "deep learning protein protein interaction prediction",
+    "biocatalysis enzyme design catalytic efficiency",
     "AI protein ligand binding affinity prediction",
+    "enzyme discovery characterization industrial biocatalysis",
     "machine learning enzyme activity stability selectivity prediction",
     "geometric deep learning protein structure function",
     "self supervised protein representation learning",
     "AI protein engineering experimental validation",
     "multimodal protein sequence structure model",
     "deep learning protein small molecule docking scoring",
-    "machine learning directed evolution fitness landscape",
     "generative AI antibody peptide protein design",
     "computational enzyme design AI catalytic activity",
     "protein mutation effect stability function prediction",
+    "multi enzyme cascade biotransformation engineering",
+    "enzyme immobilization stability activity engineering",
 )
 
 PROTEIN_TERMS = (
@@ -703,8 +706,16 @@ def assess_relevance(title: str, abstract: str) -> dict:
         20,
         len(method_title) * 6 + len(method_all) * 2 + (5 if ai_title else 0),
     ) if has_ai_method else 0
+    engineering_score = min(
+        20,
+        len(modification_title) * 6
+        + len(modification_all) * 2
+        + len(performance_title) * 4
+        + len(biocatalysis_title) * 3
+        + len(experiment_all),
+    ) if has_legacy_engineering else 0
     is_review = bool(phrase_hits(title_text, REVIEW_TERMS + ("retrospective", "bibliometric")))
-    tier = "core" if has_ai_method else "adjacent"
+    tier = "core"
     track = choose_track(full_text, title_text)
     evidence = []
     if method_title:
@@ -724,7 +735,9 @@ def assess_relevance(title: str, abstract: str) -> dict:
         "tier": tier,
         "topic_score": topic_score,
         "method_score": method_score,
+        "engineering_score": engineering_score,
         "is_ai_method": has_ai_method,
+        "topic_family": "ai_for_protein" if has_ai_method else "enzyme_engineering",
         "is_review": is_review,
         "track": track,
         "track_label": TRACKS[track][0],
@@ -768,17 +781,18 @@ def score_record(record: dict, database: list[dict], assessment: dict) -> tuple[
         quality_score += {"一区": 1.5, "二区": 1.0, "三区": 0.5}.get(info["cas_rank"], 0)
     topic_component = assessment["topic_score"]
     method_component = assessment.get("method_score", 0) * 1.5
+    engineering_component = assessment.get("engineering_score", 0) * 1.5
+    specialty_component = max(method_component, engineering_component)
     total = (
-        topic_component + method_component + recency_score
+        topic_component + specialty_component + recency_score
         + citation_score + fit["scope_score"] + quality_score
     )
-    if assessment["tier"] == "adjacent":
-        total -= 8
     if assessment.get("is_review"):
         total -= 15
     breakdown = {
         "topic": round(topic_component, 1),
         "methodology": round(method_component, 1),
+        "engineering": round(engineering_component, 1),
         "recency": round(recency_score, 1),
         "citation": round(citation_score, 1),
         "journal_scope": fit["scope_score"],
@@ -814,6 +828,7 @@ def build_entry(record: dict, database: list[dict], assessment: dict, score: flo
         "source": " + ".join(record.get("sources") or []),
         "relevance_tier": assessment["tier"],
         "is_ai_method": assessment.get("is_ai_method", False),
+        "topic_family": assessment.get("topic_family", ""),
         "track": assessment["track"],
         "track_label": assessment["track_label"],
         "recommendation_reason": assessment["reason"],
@@ -831,8 +846,6 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
     selected = []
     venue_counts = Counter()
     track_counts = Counter()
-    adjacent_count = 0
-    non_ai_count = 0
     review_count = 0
     for item in candidates:
         _, key, record, assessment, _ = item
@@ -841,17 +854,11 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
             continue
         if track_counts[assessment["track"]] >= MAX_SAME_TRACK:
             continue
-        if assessment["tier"] == "adjacent" and adjacent_count >= MAX_ADJACENT:
-            continue
-        if not assessment.get("is_ai_method") and non_ai_count >= MAX_NON_AI:
-            continue
         if assessment.get("is_review") and review_count >= MAX_REVIEWS:
             continue
         selected.append(item)
         venue_counts[venue] += 1
         track_counts[assessment["track"]] += 1
-        adjacent_count += assessment["tier"] == "adjacent"
-        non_ai_count += not assessment.get("is_ai_method")
         review_count += assessment.get("is_review", False)
         if len(selected) == MAX_PAPERS:
             return selected
@@ -861,26 +868,29 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
         venue = normalize_text(record.get("venue")) or "unknown"
         if key in selected_keys or venue_counts[venue] >= MAX_SAME_VENUE:
             continue
-        if assessment["tier"] == "adjacent" and adjacent_count >= MAX_ADJACENT:
-            continue
-        if not assessment.get("is_ai_method") and non_ai_count >= MAX_NON_AI:
-            continue
         if assessment.get("is_review") and review_count >= MAX_REVIEWS:
             continue
         selected.append(item)
         selected_keys.add(key)
         venue_counts[venue] += 1
-        adjacent_count += assessment["tier"] == "adjacent"
-        non_ai_count += not assessment.get("is_ai_method")
         review_count += assessment.get("is_review", False)
         if len(selected) == MAX_PAPERS:
             break
+    if len(candidates) >= MAX_PAPERS and len(selected) < MAX_PAPERS:
+        selected_keys = {item[1] for item in selected}
+        for item in candidates:
+            if item[1] in selected_keys:
+                continue
+            selected.append(item)
+            selected_keys.add(item[1])
+            if len(selected) == MAX_PAPERS:
+                break
     return selected
 
 
 def main() -> None:
     log.info("=" * 62)
-    log.info("AI for Protein 每日文献 v6：多源检索 + AI方法准入 + 任务覆盖")
+    log.info("酶工程 + AI for Protein 每日文献 v7：双主题并列准入")
     log.info("来源: %s；忽略历史: %s", ", ".join(ENABLED_SOURCES), IGNORE_SEEN)
     log.info("=" * 62)
     database = load_json(JOURNALS_DB)
@@ -936,6 +946,10 @@ def main() -> None:
         for score, _, record, assessment, breakdown in selected
     ]
     track_summary = dict(Counter(entry["track_label"] for entry in entries))
+    family_summary = dict(Counter(
+        "AI for Protein" if entry.get("topic_family") == "ai_for_protein" else "酶工程"
+        for entry in entries
+    ))
     source_summary = dict(Counter(
         source for entry in entries for source in entry.get("sources", [])
     ))
@@ -944,11 +958,12 @@ def main() -> None:
         "total_works": len(eligible),
         "eligible_new_works": len(new_records),
         "search_days": search_days,
-        "selection_method": "multi-source+ai-protein-method-gate-v6+journal-scope+diversity",
+        "selection_method": "multi-source+enzyme-or-ai-protein-gate-v7+recency+diversity",
         "enabled_sources": list(ENABLED_SOURCES),
         "source_summary": source_summary,
         "source_failures": failures,
         "track_summary": track_summary,
+        "family_summary": family_summary,
         "tier_summary": dict(Counter(entry["relevance_tier"] for entry in entries)),
         "rejection_summary": dict(rejection_counts.most_common(8)),
         "papers": entries,
@@ -965,7 +980,10 @@ def main() -> None:
         daily_log.append({"date": today_tag, "count": len(entries), "dois": sorted(new_dois)})
         save_seen_papers(seen_dois, daily_log)
 
-    log.info("最终精选 %s 篇；赛道=%s；来源=%s", len(entries), track_summary, source_summary)
+    log.info(
+        "最终精选 %s 篇；主题=%s；赛道=%s；来源=%s",
+        len(entries), family_summary, track_summary, source_summary,
+    )
     print(f"数据保存: {output_path}")
     for index, entry in enumerate(entries, 1):
         print(

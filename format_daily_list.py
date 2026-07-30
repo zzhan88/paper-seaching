@@ -46,11 +46,11 @@ def gen_rec(p):
 def gen_md(data):
     ps = data["papers"]
     ls = [
-        "# {emoji_book} AI for Protein 每日必读文献清单",
+        "# {emoji_book} 酶工程 + AI for Protein 每日必读文献清单",
         "",
         f"**生成日期**: {datetime.now().strftime('%Y年%m月%d日')}",
         "",
-        "*本清单聚合蛋白质领域的新AI模型与方法学论文，覆盖设计、相互作用、结合和性质预测。*",
+        "*本清单同时聚合酶工程及 AI for Protein 最新论文。*",
         f"**数据统计**: 共检索 {data.get('total_works',0)} 篇论文，精选 {len(ps)} 篇。",
         "",
         "---", "",
