@@ -250,13 +250,13 @@ def gen_html(data: dict, now: datetime | None = None) -> str:
       <p class="hero-sub">{date_cn}　·　两个并列主题的最新 {len(papers)} 篇文献</p>
       <table class="stats" role="presentation"><tr>
         <td><strong>{len(papers)}</strong>今日精选</td>
-        <td><strong>{esc(data.get('total_works', 0))}</strong>对口候选</td>
+        <td><strong>{esc(data.get('top_journal_count', 0))}</strong>Top期刊</td>
         <td><strong>{translated_count}</strong>中文速读</td>
       </tr></table>
     </div>
     <div class="intro">
       <h2>先看结论，再决定是否阅读全文</h2>
-      <p>本期从 {esc(source_text(data))} 聚合候选，同时检索酶设计、改造、定向进化、生物催化和性能优化，以及蛋白质基础模型、生成式设计、相互作用、结合与性质预测。两类主题并列参与排序，共同选出最新 {len(papers)} 篇。</p>
+      <p>本期从 {esc(source_text(data))} 聚合 {esc(data.get('total_works', 0))} 篇对口候选，同时检索酶设计、改造、定向进化、生物催化和性能优化，以及蛋白质基础模型、生成式设计、相互作用、结合与性质预测。主题准入后优先选择对口 Top 期刊，共同选出最新 {len(papers)} 篇。</p>
       <div class="summary-chips">{family_chips}</div>
       <div class="summary-chips">{track_chips}</div>{source_notice}
     </div>

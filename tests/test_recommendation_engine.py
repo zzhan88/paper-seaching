@@ -1,6 +1,8 @@
 import unittest
 
 from recommendation_engine import (
+    CROSSREF_TARGET_JOURNALS,
+    PUBMED_TARGET_JOURNAL_GROUPS,
     SEARCH_TOPICS,
     assess_relevance,
     journal_fit,
@@ -17,6 +19,8 @@ class RecommendationEngineTests(unittest.TestCase):
         self.assertIn("protein language model", first_eight)
         self.assertIn("biocatalysis", first_eight)
         self.assertIn("protein ligand", first_eight)
+        self.assertIn("Nature Methods", sum(PUBMED_TARGET_JOURNAL_GROUPS, ()))
+        self.assertIn("ACS Catalysis", CROSSREF_TARGET_JOURNALS)
 
     def test_core_enzyme_engineering_paper_is_accepted(self):
         result = assess_relevance(
@@ -179,11 +183,41 @@ class RecommendationEngineTests(unittest.TestCase):
         )
         self.assertEqual(
             journal_fit("Nature", {"name": "Nature"})["level"],
-            "综合期刊·按主题入选",
+            "Top期刊·主题对口",
         )
         self.assertEqual(
-            journal_fit("Bioresource Technology", {"name": "Bioresource Technology"})["level"],
-            "高度对口",
+            journal_fit(
+                "Bioresource Technology",
+                {"name": "Bioresource Technology"},
+                "Enzyme engineering for lignocellulosic biomass biorefineries",
+            )["level"],
+            "场景高度对口",
+        )
+
+    def test_conditional_journal_does_not_receive_unconditional_bonus(self):
+        fit = journal_fit(
+            "Journal of Agricultural and Food Chemistry",
+            {"name": "Journal of Agricultural and Food Chemistry"},
+            "A protein language model for antibody design",
+        )
+        self.assertEqual(fit["priority_tier"], "general")
+        self.assertEqual(fit["scope_score"], 4)
+
+    def test_top_journals_are_reserved_when_qualified_candidates_exist(self):
+        candidates = []
+        for index in range(6):
+            assessment = {
+                "tier": "core", "track": f"track{index}",
+                "is_ai_method": True, "is_review": False,
+            }
+            priority = "general" if index < 2 else "top"
+            candidates.append((
+                120 - index, f"k{index}", {"venue": f"J{index}"}, assessment,
+                {"journal_priority": priority},
+            ))
+        selected = select_diverse(candidates)
+        self.assertGreaterEqual(
+            sum(item[4].get("journal_priority") == "top" for item in selected), 4
         )
 
     def test_diversity_limits_same_venue(self):

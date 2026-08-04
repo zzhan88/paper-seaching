@@ -8,6 +8,7 @@ class EmailReportTests(unittest.TestCase):
     def setUp(self):
         self.data = {
             "total_works": 28,
+            "top_journal_count": 1,
             "enabled_sources": ["openalex", "pubmed", "crossref"],
             "track_summary": {"蛋白质基础模型": 1},
             "family_summary": {"AI for Protein": 1},
@@ -45,6 +46,7 @@ class EmailReportTests(unittest.TestCase):
         self.assertIn("酶工程 × AI for Protein", result)
         self.assertIn("AI方法 24", result)
         self.assertIn("AI for Protein <strong>1</strong>", result)
+        self.assertIn("<strong>1</strong>Top期刊", result)
         self.assertNotIn("<details", result)
 
     def test_untrusted_text_is_escaped(self):

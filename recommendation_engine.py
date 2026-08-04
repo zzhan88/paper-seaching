@@ -31,6 +31,7 @@ MAX_PAPERS = 10
 MAX_SAME_VENUE = 2
 MAX_SAME_TRACK = 4
 MAX_REVIEWS = 2
+MIN_TOP_JOURNAL_TARGET = 4
 SEARCH_WINDOWS = (7, 30, 90, 180, 365)
 IGNORE_SEEN = os.environ.get("IGNORE_SEEN", "").lower() in {"1", "true", "yes"}
 ENABLED_SOURCES = tuple(
@@ -59,6 +60,40 @@ SEARCH_TOPICS = (
     "protein mutation effect stability function prediction",
     "multi enzyme cascade biotransformation engineering",
     "enzyme immobilization stability activity engineering",
+)
+
+PRIORITY_TOPIC_QUERY = (
+    "enzyme engineering protein engineering biocatalysis protein design "
+    "protein language model generative protein enzyme activity stability selectivity"
+)
+PUBMED_PRIORITY_TOPIC_QUERY = (
+    '"enzyme engineering"[Title/Abstract] OR "protein engineering"[Title/Abstract] OR '
+    'biocatalysis[Title/Abstract] OR "protein design"[Title/Abstract] OR '
+    '"protein language model"[Title/Abstract] OR "generative protein"[Title/Abstract] OR '
+    '(enzyme[Title/Abstract] AND (activity[Title/Abstract] OR stability[Title/Abstract] '
+    'OR selectivity[Title/Abstract]))'
+)
+PUBMED_TARGET_JOURNAL_GROUPS = (
+    ("Nature", "Science", "Cell", "Proceedings of the National Academy of Sciences",
+     "Nature Biotechnology", "Nature Methods"),
+    ("Nature Machine Intelligence", "Nature Computational Science", "Nature Chemical Biology",
+     "Nature Structural & Molecular Biology", "Nature Catalysis", "Nature Communications"),
+    ("Science Advances", "Molecular Cell", "Cell Systems", "Cell Chemical Biology",
+     "Journal of the American Chemical Society", "Angewandte Chemie International Edition"),
+    ("ACS Catalysis", "ACS Synthetic Biology", "ACS Chemical Biology", "Chemical Science",
+     "Protein Science", "Structure"),
+    ("Green Chemistry", "ChemCatChem", "ChemSusChem", "Bioresource Technology",
+     "Bioresources and Bioprocessing", "Biotechnology Advances"),
+)
+CROSSREF_TARGET_JOURNALS = (
+    "Nature Biotechnology", "Nature Methods", "Nature Machine Intelligence",
+    "Nature Computational Science", "Nature Chemical Biology", "Nature Catalysis",
+    "ACS Catalysis", "Journal of the American Chemical Society",
+    "Angewandte Chemie International Edition", "Cell Systems",
+    "ACS Synthetic Biology", "ACS Chemical Biology", "ACS Sustainable Chemistry & Engineering",
+    "Journal of Agricultural and Food Chemistry", "Green Chemistry", "ChemCatChem",
+    "ChemSusChem", "Bioresource Technology", "Bioresources and Bioprocessing",
+    "Biotechnology Advances", "Chemical Engineering Journal", "Advanced Science",
 )
 
 PROTEIN_TERMS = (
@@ -173,38 +208,75 @@ TRACKS = {
     ),
 }
 
+TOP_PRIORITY_JOURNALS = {
+    "Nature", "Science", "Cell", "PNAS", "Nature Biotechnology", "Nature Methods",
+    "Nature Machine Intelligence", "Nature Computational Science", "Nature Chemical Biology",
+    "Nature Structural & Molecular Biology", "Nature Chemistry", "Nature Catalysis",
+    "Nature Communications", "Science Advances", "Molecular Cell", "Cell Systems",
+    "Cell Chemical Biology", "Patterns", "Journal of the American Chemical Society",
+    "Angewandte Chemie International Edition", "ACS Central Science", "Chemical Science",
+    "Advanced Science",
+}
 CORE_SCOPE_JOURNALS = {
-    "Nature Methods", "Nature Machine Intelligence", "Bioinformatics",
+    "Bioinformatics",
     "PLOS Computational Biology", "Briefings in Bioinformatics",
     "Journal of Computational Biology", "Machine Learning: Science and Technology",
-    "ACS Catalysis", "Nature Catalysis", "Enzyme and Microbial Technology",
+    "ACS Catalysis", "Enzyme and Microbial Technology",
     "Protein Engineering, Design and Selection", "Biotechnology and Bioengineering",
     "Applied Microbiology and Biotechnology", "Journal of Biotechnology",
     "Biochemical Engineering Journal", "Process Biochemistry",
     "Catalysis Science & Technology", "Biotechnology Journal",
     "Microbial Cell Factories", "Metabolic Engineering", "ACS Synthetic Biology",
     "RSC Chemical Biology", "ACS Chemical Biology", "ChemBioChem",
-    "Bioresource Technology", "Synthetic and Systems Biotechnology",
+    "Synthetic and Systems Biotechnology", "ChemCatChem", "npj Biocatalysis",
+    "Bioresources and Bioprocessing", "Green Chemistry", "ChemSusChem",
 }
 ADJACENT_SCOPE_JOURNALS = {
-    "Nature Biotechnology", "Nature Chemical Biology",
-    "Cell Chemical Biology", "Journal of Biological Chemistry",
+    "Journal of Biological Chemistry",
     "Protein Science", "Structure", "Journal of Molecular Biology",
     "Journal of Chemical Information and Modeling",
-    "Journal of Chemical Theory and Computation", "Chemical Science",
-    "Journal of the American Chemical Society", "Angewandte Chemie International Edition",
+    "Journal of Chemical Theory and Computation",
     "Nucleic Acids Research", "Bioinformatics", "Journal of Cheminformatics",
     "Computational and Structural Biotechnology Journal",
     "International Journal of Biological Macromolecules",
     "Journal of Agricultural and Food Chemistry",
     "Frontiers in Bioengineering and Biotechnology",
     "Computational Biology and Chemistry", "FEBS Journal",
-    "Biotechnology Advances", "Applied and Environmental Microbiology",
+    "Biotechnology Advances", "Applied and Environmental Microbiology", "ACS Omega",
 }
 BROAD_SCOPE_JOURNALS = {
-    "Nature", "Science", "Cell", "Nature Communications", "Science Advances",
-    "PNAS", "Communications Biology", "Communications Chemistry", "iScience",
-    "Scientific Reports", "Advanced Science",
+    "Communications Biology", "Communications Chemistry", "iScience", "Scientific Reports",
+}
+
+CONDITIONAL_JOURNAL_RULES = {
+    "ACS Sustainable Chemistry & Engineering": (
+        "sustainab", "green chemistry", "biobased", "bio based", "biomass", "waste",
+        "circular", "life cycle", "carbon efficiency", "renewable",
+    ),
+    "Green Chemistry": (
+        "sustainab", "green chemistry", "biobased", "bio based", "biomass", "waste",
+        "renewable", "atom economy", "environmental factor",
+    ),
+    "ChemSusChem": (
+        "sustainab", "green chemistry", "biobased", "bio based", "biomass", "waste",
+        "renewable", "circular",
+    ),
+    "Journal of Agricultural and Food Chemistry": (
+        "food", "agricultur", "crop", "plant", "flavor", "nutrition", "feed",
+        "pesticide", "food processing",
+    ),
+    "Bioresource Technology": (
+        "biomass", "bioresource", "biorefinery", "waste", "fermentation", "biofuel",
+        "bioprocess", "lignocellulos", "industrial biocatal",
+    ),
+    "Bioresources and Bioprocessing": (
+        "biomass", "bioresource", "biorefinery", "waste", "fermentation", "bioprocess",
+        "industrial biocatal", "biomanufactur",
+    ),
+    "Chemical Engineering Journal": (
+        "industrial", "scale up", "scale-up", "bioprocess", "reactor", "process engineering",
+        "biomanufactur", "immobiliz", "continuous flow",
+    ),
 }
 
 logging.basicConfig(
@@ -404,7 +476,13 @@ def pubmed_batch(queries: tuple[str, ...], start_date: str, end_date: str) -> li
     session.headers.update({"User-Agent": "DailyPaperList/5.0 daily-paper@bot.com"})
     api_key = os.environ.get("NCBI_API_KEY", "")
     records = []
-    for query in queries[:8]:
+    targeted_queries = tuple(
+        f"({PUBMED_PRIORITY_TOPIC_QUERY}) AND (" + " OR ".join(
+            f'"{journal}"[jour]' for journal in group
+        ) + ")"
+        for group in PUBMED_TARGET_JOURNAL_GROUPS
+    )
+    for query in tuple(queries[:8]) + targeted_queries:
         term = (
             f"({query}) AND "
             f"(\"{start_date.replace('-', '/')}\"[Date - Publication] : "
@@ -454,15 +532,26 @@ def crossref_batch(queries: tuple[str, ...], start_date: str, end_date: str) -> 
     mailto = os.environ.get("CROSSREF_MAILTO", "daily-paper@bot.com")
     session.headers.update({"User-Agent": f"DailyPaperList/5.0 (mailto:{mailto})"})
     records = []
-    for query in queries[:8]:
-        data = request_json(session, "https://api.crossref.org/works", {
-            "query.bibliographic": query,
+    query_specs = [
+        {"query.bibliographic": query}
+        for query in queries[:8]
+    ] + [
+        {
+            "query.bibliographic": PRIORITY_TOPIC_QUERY,
+            "query.container-title": journal,
+        }
+        for journal in CROSSREF_TARGET_JOURNALS
+    ]
+    for query_spec in query_specs:
+        params = {
             "filter": f"from-pub-date:{start_date},until-pub-date:{end_date}",
             "rows": 25,
             "sort": "published",
             "order": "desc",
             "mailto": mailto,
-        }, "Crossref")
+        }
+        params.update(query_spec)
+        data = request_json(session, "https://api.crossref.org/works", params, "Crossref")
         for item in (data or {}).get("message", {}).get("items", []):
             titles = item.get("title") or []
             venues = item.get("container-title") or []
@@ -745,21 +834,45 @@ def assess_relevance(title: str, abstract: str) -> dict:
     }
 
 
-def journal_fit(venue: str, journal_info: dict | None) -> dict:
+def journal_fit(
+    venue: str,
+    journal_info: dict | None,
+    title: str = "",
+    abstract: str = "",
+) -> dict:
     name = journal_info["name"] if journal_info else venue
+    if name in TOP_PRIORITY_JOURNALS:
+        return {
+            "level": "Top期刊·主题对口",
+            "scope_score": 16,
+            "priority_tier": "top",
+        }
+    if name in CONDITIONAL_JOURNAL_RULES:
+        context = normalize_text(f"{title} {abstract}")
+        if phrase_hits(context, CONDITIONAL_JOURNAL_RULES[name]):
+            return {
+                "level": "场景高度对口",
+                "scope_score": 10,
+                "priority_tier": "conditional",
+            }
+        return {
+            "level": "期刊相关·场景一般",
+            "scope_score": 4,
+            "priority_tier": "general",
+        }
     if name in CORE_SCOPE_JOURNALS:
-        return {"level": "高度对口", "scope_score": 10}
+        return {"level": "高度对口", "scope_score": 11, "priority_tier": "core"}
     if name in ADJACENT_SCOPE_JOURNALS:
-        return {"level": "方向对口", "scope_score": 7}
+        return {"level": "方向对口", "scope_score": 8, "priority_tier": "adjacent"}
     if name in BROAD_SCOPE_JOURNALS:
-        return {"level": "综合期刊·按主题入选", "scope_score": 4}
+        return {"level": "综合期刊·按主题入选", "scope_score": 5, "priority_tier": "general"}
     normalized = normalize_text(name)
     if any(term in normalized for term in (
         "enzyme", "catal", "biotech", "protein", "biochem", "bioinform",
         "computational biology", "machine learning", "artificial intelligence",
     )):
-        return {"level": "方向对口", "scope_score": 6}
-    return {"level": "交叉方向", "scope_score": 2}
+        return {"level": "方向对口", "scope_score": 6, "priority_tier": "adjacent"}
+    return {"level": "交叉方向", "scope_score": 2, "priority_tier": "general"}
 
 
 def score_record(record: dict, database: list[dict], assessment: dict) -> tuple[float, dict]:
@@ -774,7 +887,9 @@ def score_record(record: dict, database: list[dict], assessment: dict) -> tuple[
     citation_velocity = (record.get("citations") or 0) / max(days_old / 365.0, 0.25)
     citation_score = min(6.0, math.log1p(citation_velocity) * 1.5)
     info = lookup_journal(record.get("venue", ""), database)
-    fit = journal_fit(record.get("venue", ""), info)
+    fit = journal_fit(
+        record.get("venue", ""), info, record.get("title", ""), record.get("abstract", "")
+    )
     quality_score = 0.0
     if info:
         quality_score += min(2.5, math.log1p(max(0, info["if"])) / 1.5)
@@ -796,6 +911,7 @@ def score_record(record: dict, database: list[dict], assessment: dict) -> tuple[
         "recency": round(recency_score, 1),
         "citation": round(citation_score, 1),
         "journal_scope": fit["scope_score"],
+        "journal_priority": fit["priority_tier"],
         "journal_quality": round(quality_score, 1),
         "total": round(total, 1),
     }
@@ -804,7 +920,9 @@ def score_record(record: dict, database: list[dict], assessment: dict) -> tuple[
 
 def build_entry(record: dict, database: list[dict], assessment: dict, score: float, breakdown: dict) -> dict:
     info = lookup_journal(record.get("venue", ""), database)
-    fit = journal_fit(record.get("venue", ""), info)
+    fit = journal_fit(
+        record.get("venue", ""), info, record.get("title", ""), record.get("abstract", "")
+    )
     authors = record.get("authors") or []
     doi = normalize_doi(record.get("doi"))
     title = record.get("title") or "N/A"
@@ -844,36 +962,50 @@ def build_entry(record: dict, database: list[dict], assessment: dict, score: flo
 
 def select_diverse(candidates: list[tuple]) -> list[tuple]:
     selected = []
+    selected_keys = set()
     venue_counts = Counter()
     track_counts = Counter()
     review_count = 0
-    for item in candidates:
-        _, key, record, assessment, _ = item
-        venue = normalize_text(record.get("venue")) or "unknown"
-        if venue_counts[venue] >= MAX_SAME_VENUE:
-            continue
-        if track_counts[assessment["track"]] >= MAX_SAME_TRACK:
-            continue
-        if assessment.get("is_review") and review_count >= MAX_REVIEWS:
-            continue
-        selected.append(item)
-        venue_counts[venue] += 1
-        track_counts[assessment["track"]] += 1
-        review_count += assessment.get("is_review", False)
-        if len(selected) == MAX_PAPERS:
-            return selected
-    selected_keys = {item[1] for item in selected}
-    for item in candidates:
+
+    def can_add(item: tuple, enforce_track: bool = True) -> bool:
         _, key, record, assessment, _ = item
         venue = normalize_text(record.get("venue")) or "unknown"
         if key in selected_keys or venue_counts[venue] >= MAX_SAME_VENUE:
-            continue
+            return False
+        if enforce_track and track_counts[assessment["track"]] >= MAX_SAME_TRACK:
+            return False
         if assessment.get("is_review") and review_count >= MAX_REVIEWS:
-            continue
+            return False
+        return True
+
+    def add(item: tuple) -> None:
+        nonlocal review_count
+        _, key, record, assessment, _ = item
+        venue = normalize_text(record.get("venue")) or "unknown"
         selected.append(item)
         selected_keys.add(key)
         venue_counts[venue] += 1
+        track_counts[assessment["track"]] += 1
         review_count += assessment.get("is_review", False)
+
+    top_candidates = [
+        item for item in candidates
+        if item[4].get("journal_priority") == "top"
+    ]
+    for item in top_candidates:
+        if can_add(item):
+            add(item)
+        if len(selected) >= min(MIN_TOP_JOURNAL_TARGET, len(top_candidates)):
+            break
+
+    for item in candidates:
+        if can_add(item):
+            add(item)
+        if len(selected) == MAX_PAPERS:
+            return selected
+    for item in candidates:
+        if can_add(item, enforce_track=False):
+            add(item)
         if len(selected) == MAX_PAPERS:
             break
     if len(candidates) >= MAX_PAPERS and len(selected) < MAX_PAPERS:
@@ -881,8 +1013,7 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
         for item in candidates:
             if item[1] in selected_keys:
                 continue
-            selected.append(item)
-            selected_keys.add(item[1])
+            add(item)
             if len(selected) == MAX_PAPERS:
                 break
     return selected
@@ -890,7 +1021,7 @@ def select_diverse(candidates: list[tuple]) -> list[tuple]:
 
 def main() -> None:
     log.info("=" * 62)
-    log.info("酶工程 + AI for Protein 每日文献 v7：双主题并列准入")
+    log.info("酶工程 + AI for Protein 每日文献 v8：双主题 + Top期刊优先")
     log.info("来源: %s；忽略历史: %s", ", ".join(ENABLED_SOURCES), IGNORE_SEEN)
     log.info("=" * 62)
     database = load_json(JOURNALS_DB)
@@ -953,17 +1084,22 @@ def main() -> None:
     source_summary = dict(Counter(
         source for entry in entries for source in entry.get("sources", [])
     ))
+    top_journal_count = sum(
+        (entry.get("journal_fit") or {}).get("priority_tier") == "top"
+        for entry in entries
+    )
     output = {
         "generated_at": datetime.now().isoformat(),
         "total_works": len(eligible),
         "eligible_new_works": len(new_records),
         "search_days": search_days,
-        "selection_method": "multi-source+enzyme-or-ai-protein-gate-v7+recency+diversity",
+        "selection_method": "multi-source+target-journals+enzyme-or-ai-protein-gate-v8",
         "enabled_sources": list(ENABLED_SOURCES),
         "source_summary": source_summary,
         "source_failures": failures,
         "track_summary": track_summary,
         "family_summary": family_summary,
+        "top_journal_count": top_journal_count,
         "tier_summary": dict(Counter(entry["relevance_tier"] for entry in entries)),
         "rejection_summary": dict(rejection_counts.most_common(8)),
         "papers": entries,
@@ -981,8 +1117,8 @@ def main() -> None:
         save_seen_papers(seen_dois, daily_log)
 
     log.info(
-        "最终精选 %s 篇；主题=%s；赛道=%s；来源=%s",
-        len(entries), family_summary, track_summary, source_summary,
+        "最终精选 %s 篇；Top期刊=%s；主题=%s；赛道=%s；来源=%s",
+        len(entries), top_journal_count, family_summary, track_summary, source_summary,
     )
     print(f"数据保存: {output_path}")
     for index, entry in enumerate(entries, 1):
